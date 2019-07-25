@@ -4,7 +4,6 @@ import logging
 import configparser
 import os
 from googletrans import Translator
-from pprint import pprint
 
 PROJECT_DIR = os.path.dirname(__file__)
 CONFIG = configparser.ConfigParser()
