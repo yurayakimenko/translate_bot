@@ -4,6 +4,7 @@ import logging
 import configparser
 import os
 from googletrans import Translator
+from logging.handlers import RotatingFileHandler
 
 PROJECT_DIR = os.path.dirname(__file__)
 CONFIG = configparser.ConfigParser()
@@ -13,6 +14,17 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+fh = RotatingFileHandler('./log/logfile',
+                         mode='a', maxBytes=int(3 * 1024 * 1024),
+                         backupCount=5, encoding=None, delay=0)
+fh.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 translator = Translator()
 
 
@@ -23,12 +35,17 @@ def error(bot, update, error):
 
 def message_handler(bot, update):
     message_text = update.message.text
-    lang = translator.detect(message_text).lang
-    if lang == 'en':
-        translated = translator.translate(message_text, dest='ru').text
+    try:
+        lang = translator.detect(message_text).lang
+        if lang == 'en':
+            translated = translator.translate(message_text, dest='ru').text
+        else:
+            translated = translator.translate(message_text, dest='en').text
+    except Exception as e:
+        logger.error(e, exc_info=True)
     else:
-        translated = translator.translate(message_text, dest='en').text
-    update.message.reply_text(translated)
+        update.message.reply_text(translated)
+        logger.info("'{}' -> '{}' by {}".format(message_text, translated, update.message.chat_id))
 
 
 def start(bot, update):
