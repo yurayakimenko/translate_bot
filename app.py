@@ -6,6 +6,7 @@ import os
 from googletrans import Translator
 from logging.handlers import RotatingFileHandler
 from pprint import pprint
+import random
 
 PROJECT_DIR = os.path.dirname(__file__)
 CONFIG = configparser.ConfigParser()
@@ -39,7 +40,8 @@ lang_parts_dict = {
         "adverb": "наречие",
         "preposition": "предлог",
         "conjunction": "союз",
-        "phrase": "фраза"
+        "phrase": "фраза",
+        "interjection": "междометие"
     }
 }
 
@@ -82,29 +84,36 @@ def get_examples(translated):
 
 def format_examples(examples):
     examples_formatted = str()
-    for example in examples:
+    for example in random.sample(examples, 5):
         examples_formatted += "\n" \
-                              "• {}".format(example)
+                              "• {}\n".format(example)
     return examples_formatted
 
 
 def get_synonyms(translated):
     s = translated.extra_data.get('synonyms')
-    synonyms = []
+    synonyms = {}
     for lang_part in s:
-        lang_part_code = lang_part[-1]
-        print(lang_part_code, lang_part[0])
+        lang_part_name = lang_part[0]
+        synonyms[lang_part_name] = []
+        variants = []
         for word in lang_part[1]:
-            synonyms.append(word[0][:2])
+            i = 0
+            while i < len(word[0]) and word[0][i] in variants:
+                print(word[0][i])
+                i += 1
+            if i < len(word[0]):
+                variants.append(word[0][i])
+        synonyms[lang_part_name] = variants
     return synonyms
 
 
 def format_synonyms(synonyms):
     synonyms_formatted = str()
-    stop_count = 2 if len(synonyms) >= 3 else 3
-    for words in synonyms:
-        synonyms_formatted += "\n" \
-                              "• {}".format(', '.join(words[:stop_count]))
+    for lang_part, words in synonyms.items():
+        synonyms_formatted += "\n<i>{}</i>\n".format(lang_part)
+        synonyms_formatted += "\t\t\t\t\t• {}\n"\
+            .format(', '.join(words[:4]))
     return synonyms_formatted
 
 
@@ -119,7 +128,7 @@ def get_possible_translations(translated):
             print(lang_part_code, lang_part[0])
             for word in lang_part[2]:
                 variants[word[0]] = word[1]
-            possible_translations[lang_parts_codes[lang_part_code]] = variants
+            possible_translations[lang_part[0]] = variants
     elif possible_translations:
         possible_translations = []
         for word in translated.extra_data.get('possible-translations')[0][2]:
@@ -132,7 +141,7 @@ def format_possible_translations(possible_translations):
     if type(possible_translations) == dict:
         stop_count = 2 if len(possible_translations) >= 3 else 3
         for lang_part, words in possible_translations.items():
-            possible_translations_formatted += "\n<i>{}</i>\n".format(lang_parts_dict['ru'][lang_part])
+            possible_translations_formatted += "\n<i>{}</i>\n".format(lang_part)
             translation_count = 0
             for word, translations in words.items():
                 if translation_count < stop_count:
@@ -210,7 +219,7 @@ def callback_examples(bot, query, message_text):
     else:
         e = get_examples(translated)
         e_formatted = format_examples(e)
-        reply_text = "[ {} → {} ]" \
+        reply_text = "[ Примеры | {} → {} ]" \
                      "\n{}".format(message_text, translated.text,
                                    e_formatted)
         synonyms = translated.extra_data['synonyms']
@@ -230,8 +239,9 @@ def callback_synonyms(bot, query, message_text):
         logger.error(e, exc_info=True)
     else:
         s = get_synonyms(translated)
+        pprint(s)
         s_formatted = format_synonyms(s)
-        reply_text = "[ {} → {} ]" \
+        reply_text = "[ Синонимы | {} → {} ]" \
                      "\n{}".format(message_text, translated.text,
                                    s_formatted)
         row = [InlineKeyboardButton('Перевод', callback_data='t/{}'.format(message_text))]
