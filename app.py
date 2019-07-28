@@ -84,7 +84,9 @@ def get_examples(translated):
 
 def format_examples(examples):
     examples_formatted = str()
-    for example in random.sample(examples, 5):
+    if len(examples) > 5:
+        examples = random.sample(examples, 5)
+    for example in examples:
         examples_formatted += "\n" \
                               "• {}\n".format(example)
     return examples_formatted
